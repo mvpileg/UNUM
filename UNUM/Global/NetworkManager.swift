@@ -24,6 +24,8 @@ class NetworkManager {
     
     static let shared = NetworkManager()
 
+    private var requestBreedSet = Set<String>()
+    private var requestImageSet = Set<String>()
     private init() {}
     
     func getAllBreeds(callback: @escaping (BreedsResponse?, String?) -> Void) {
@@ -32,14 +34,30 @@ class NetworkManager {
     }
     
     func getRandomImageURL(forBreed breed: String, callback: @escaping (RandomImageResponse?, String?) -> Void) {
+        
+        if requestBreedSet.contains(breed) {
+            return
+        }
+        
         let url = "https://dog.ceo/api/breed/\(breed)/images/random"
         request(url: url, callback: callback)
     }
     
     func downloadImage(at url: String, callback: @escaping (UIImage?, String?) -> Void) {
-        print("requesting iamge at", url)
+        if requestImageSet.contains(url) {
+            print("Already requested url")
+            return
+        }
+        
+        requestImageSet.insert(url)
+        
         Alamofire.request(url).responseImage { response in
-           callback(response.result.value, response.error?.localizedDescription)
+            if let image = response.result.value {
+                callback(image, nil)
+            } else {
+                self.requestImageSet.remove(url)
+                callback(nil, response.error?.localizedDescription)
+            }
         }
     }
     
